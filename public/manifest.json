@@ -1,0 +1,28 @@
+{
+  "name": "Online Dice",
+  "short_name": "Online Dice",
+  "description": "Roll virtual dice online.",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "theme_color": "#33aaff",
+  "background_color": "#33aaff",
+  "start_url": "/roll-color-dice/",
+  "scope": "/",
+  "display": "standalone"
+}

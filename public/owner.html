@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Owner Panel &mdash; Virtual Dice Simulator</title>
+    <style>
+        @font-face {
+            font-family: "Marvin";
+            src: url("/fonts/Marvin-webfont.woff2") format("woff2");
+            font-weight: 400;
+            font-style: normal;
+            font-display: swap;
+        }
+        body {
+            background: radial-gradient(circle, #001f3f 0%, #000c1a 100%);
+            color: #fff;
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            width: 100%;
+            max-width: 420px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .card {
+            background: rgba(89, 0, 0, 0.95);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            text-align: center;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #ffd700;
+            font-family: 'Marvin', Arial, sans-serif;
+            font-size: 24px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            letter-spacing: 0.05em;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 6px;
+            border: 2px solid #ffd700;
+            font-size: 16px;
+            margin-bottom: 20px;
+            box-sizing: border-box;
+            text-align: center;
+            background: #fff;
+            color: #333;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            background: linear-gradient(to bottom, #ffd700, #ffb700);
+            color: #590000;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            text-shadow: 0 1px 0 rgba(255,255,255,0.4);
+            font-family: 'Marvin', Arial, sans-serif;
+            transition: transform 0.1s;
+        }
+        .btn:active {
+            transform: scale(0.98);
+        }
+        .error-msg {
+            color: #ff4d4d;
+            font-size: 14px;
+            margin-bottom: 15px;
+            display: none;
+        }
+        .panel-section {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #ffd700;
+            border-bottom: 1px solid rgba(255,215,0,0.3);
+            padding-bottom: 5px;
+            text-transform: uppercase;
+        }
+        .duration-inputs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 15px;
+        }
+        .duration-inputs input {
+            width: 25%;
+            margin-bottom: 0;
+            font-size: 12px;
+            padding: 8px 4px;
+        }
+        .codes-list {
+            max-height: 150px;
+            overflow-y: auto;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 8px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 6px 8px;
+            text-align: left;
+        }
+        .revoke-btn {
+            background: rgba(255, 77, 77, 0.2);
+            border: 1px solid rgba(255, 77, 77, 0.5);
+            color: #ff4d4d;
+            padding: 2px 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .revoke-btn:hover {
+            background: rgba(255, 77, 77, 0.4);
+        }
+        .logout-btn {
+            background: rgba(255,77,77,0.15);
+            border: 1px solid #ff4d4d;
+            color: #ff9999;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Auth Screen -->
+        <div id="auth-card" class="card">
+            <h3>OWNER LOGIN</h3>
+            <input type="password" id="owner-password-input" placeholder="Enter password...">
+            <div id="owner-auth-error-msg" class="error-msg">Wrong password.</div>
+            <button id="owner-auth-submit" class="btn">LOGIN</button>
+        </div>
+
+        <!-- Panel Screen (Hidden by default) -->
+        <div id="panel-card" class="card" style="display: none;">
+            <h3>OWNER PANEL</h3>
+            
+            <div class="panel-section">
+                <div class="section-title">Generate Panel Code</div>
+                <div class="duration-inputs">
+                    <input type="number" id="gen-days-input" placeholder="Days" min="0">
+                    <input type="number" id="gen-hours-input" placeholder="Hrs" min="0" max="23">
+                    <input type="number" id="gen-mins-input" placeholder="Mins" min="0" max="59">
+                    <input type="number" id="gen-secs-input" placeholder="Secs" min="0" max="59">
+                </div>
+                <button id="gen-code-btn" class="btn" style="font-size: 14px; padding: 10px;">Generate Code</button>
+            </div>
+
+            <div class="panel-section">
+                <div class="section-title">Active Codes</div>
+                <div class="codes-list">
+                    <table>
+                        <thead>
+                            <tr style="border-bottom: 1px solid rgba(255,255,255,0.15);">
+                                <th id="sort-code" style="cursor:pointer;user-select:none;">Code <span class="sort-arrow"></span></th>
+                                <th id="sort-time" style="cursor:pointer;user-select:none;">Time <span class="sort-arrow"></span></th>
+                                <th id="sort-status" style="cursor:pointer;user-select:none;">Status <span class="sort-arrow"></span></th>
+                                <th style="text-align: right;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="active-codes-list">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <button id="owner-logout-btn" class="btn logout-btn" style="font-size: 14px; padding: 10px;">LOGOUT</button>
+        </div>
+    </div>
+
+    <script>
+        let isOwnerLoggedIn = false;
+        let ownerStatusInterval = null;
+
+        function verifyOwnerPassword() {
+            const password = $("#owner-password-input").val();
+            fetch('/api/owner/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    isOwnerLoggedIn = true;
+                    showPanel();
+                } else {
+                    $("#owner-auth-error-msg").fadeIn(200);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                $("#owner-auth-error-msg").fadeIn(200);
+            });
+        }
+
+        function showPanel() {
+            $("#auth-card").hide();
+            $("#panel-card").show();
+            startOwnerStatusPolling();
+        }
+
+        function showAuth() {
+            $("#panel-card").hide();
+            $("#auth-card").show();
+            stopOwnerStatusPolling();
+        }
+
+        function startOwnerStatusPolling() {
+            fetchOwnerStatus();
+            if (ownerStatusInterval) clearInterval(ownerStatusInterval);
+            ownerStatusInterval = setInterval(fetchOwnerStatus, 1000);
+        }
+
+        function stopOwnerStatusPolling() {
+            if (ownerStatusInterval) clearInterval(ownerStatusInterval);
+            ownerStatusInterval = null;
+        }
+
+        function fetchOwnerStatus() {
+            if (!isOwnerLoggedIn) return;
+            fetch('/api/owner/status')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderServerCodes(data.codes);
+                }
+            })
+            .catch(err => console.error(err));
+        }
+
+        function formatDuration(secs) {
+            if (secs <= 0) return "00:00";
+            const days = Math.floor(secs / 86400);
+            secs %= 86400;
+            const hours = Math.floor(secs / 3600);
+            secs %= 3600;
+            const minutes = Math.floor(secs / 60);
+            const seconds = secs % 60;
+            
+            let parts = [];
+            if (days > 0) parts.push(days + "d");
+            if (hours > 0 || days > 0) parts.push(hours + "h");
+            parts.push(String(minutes).padStart(2, '0') + "m");
+            parts.push(String(seconds).padStart(2, '0') + "s");
+            return parts.join(" ");
+        }
+
+        let lastCodesArray = [];
+        let sortColumn = null;
+        let sortAscending = true;
+
+        function renderServerCodes(codesArray) {
+            lastCodesArray = codesArray;
+            const tbody = $("#active-codes-list");
+            tbody.empty();
+            if (codesArray.length === 0) {
+                tbody.append('<tr><td colspan="4" style="text-align: center; color: #aaa; font-style: italic;">No active codes</td></tr>');
+                return;
+            }
+
+            let sorted = codesArray.slice();
+            if (sortColumn === "code") {
+                sorted.sort((a, b) => a.code.localeCompare(b.code));
+            } else if (sortColumn === "time") {
+                sorted.sort((a, b) => a.timeRemaining - b.timeRemaining);
+            } else if (sortColumn === "status") {
+                sorted.sort((a, b) => (a.active === b.active) ? 0 : (a.active ? -1 : 1));
+            }
+            if (!sortAscending) sorted.reverse();
+
+            sorted.forEach(item => {
+                const statusLabel = item.active ? '<span style="color:#00ff00;">IN USE</span>' : '<span style="color:#888;">UNUSED</span>';
+                const row = `
+                    <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);">
+                        <td style="font-weight: bold; cursor:pointer;" class="code-copy-cell" data-code="${item.code}" title="Click to copy">${item.code}</td>
+                        <td style="color: #ffd700;">${formatDuration(item.timeRemaining)}</td>
+                        <td>${statusLabel}</td>
+                        <td style="text-align: right; white-space:nowrap;">
+                            <button class="copy-btn" data-code="${item.code}" style="margin-right:6px;">COPY</button>
+                            <button class="revoke-btn" data-code="${item.code}">REVOKE</button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(row);
+            });
+        }
+
+        function updateSortArrows() {
+            $(".sort-arrow").text("");
+            const arrow = sortAscending ? "▲" : "▼";
+            if (sortColumn === "code") $("#sort-code .sort-arrow").text(arrow);
+            else if (sortColumn === "time") $("#sort-time .sort-arrow").text(arrow);
+            else if (sortColumn === "status") $("#sort-status .sort-arrow").text(arrow);
+        }
+
+        function setSort(col) {
+            if (sortColumn === col) {
+                sortAscending = !sortAscending;
+            } else {
+                sortColumn = col;
+                sortAscending = true;
+            }
+            updateSortArrows();
+            renderServerCodes(lastCodesArray);
+        }
+
+        $("#sort-code").on("click", function() { setSort("code"); });
+        $("#sort-time").on("click", function() { setSort("time"); });
+        $("#sort-status").on("click", function() { setSort("status"); });
+
+        $("#owner-auth-submit").on("click", verifyOwnerPassword);
+        $("#owner-password-input").on("keypress", function(e) {
+            if (e.which === 13) verifyOwnerPassword();
+        });
+
+        $(document).on("click", ".revoke-btn", function() {
+            const code = $(this).data("code");
+            if (confirm("Revoke code " + code + "?")) {
+                fetch('/api/owner/revoke', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        fetchOwnerStatus();
+                    }
+                })
+                .catch(console.error);
+            }
+        });
+
+        function copyCodeToClipboard(code, btnEl) {
+            navigator.clipboard.writeText(code).then(function() {
+                if (btnEl) {
+                    const original = btnEl.textContent;
+                    btnEl.textContent = "COPIED!";
+                    setTimeout(function() { btnEl.textContent = original; }, 1200);
+                }
+            }).catch(function() {
+                const ta = document.createElement("textarea");
+                ta.value = code;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+            });
+        }
+
+        $(document).on("click", ".copy-btn", function() {
+            const code = $(this).data("code");
+            copyCodeToClipboard(code, this);
+        });
+
+        $(document).on("click", ".code-copy-cell", function() {
+            const code = $(this).data("code");
+            copyCodeToClipboard(code, null);
+            $(this).css("color", "#4caf50");
+            const self = this;
+            setTimeout(function() { $(self).css("color", ""); }, 600);
+        });
+
+        $("#gen-code-btn").on("click", function() {
+            const days = parseInt($("#gen-days-input").val()) || 0;
+            const hours = parseInt($("#gen-hours-input").val()) || 0;
+            const mins = parseInt($("#gen-mins-input").val()) || 0;
+            const secs = parseInt($("#gen-secs-input").val()) || 0;
+            const totalDuration = (days * 86400) + (hours * 3600) + (mins * 60) + secs;
+
+            if (totalDuration <= 0) {
+                alert("Please specify a duration greater than 0.");
+                return;
+            }
+
+            fetch('/api/owner/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ duration: totalDuration })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    $("#gen-days-input").val("");
+                    $("#gen-hours-input").val("");
+                    $("#gen-mins-input").val("");
+                    $("#gen-secs-input").val("");
+                    fetchOwnerStatus();
+                } else {
+                    alert("Failed to generate: " + (data.message || "Unknown error"));
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error communicating with server.");
+            });
+        });
+
+        $("#owner-logout-btn").on("click", function() {
+            isOwnerLoggedIn = false;
+            localStorage.removeItem('owner_logged_in');
+            localStorage.removeItem('owner_password');
+            showAuth();
+        });
+
+        // Auto-login on load
+        $(document).ready(function() {
+            // No auto-login - password required every visit
+        });
+    </script>
+</body>
+</html>

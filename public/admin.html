@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: #0a0a0a;
+      color: #fff;
+      font-family: Arial, sans-serif;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    h3 {
+      font-size: 18px;
+      margin-bottom: 12px;
+      color: #fff;
+      letter-spacing: 0.05em;
+    }
+
+    .card {
+      background: #111;
+      border: 2px solid #333;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 14px;
+    }
+
+    .status-row {
+      font-size: 14px;
+      margin-bottom: 6px;
+    }
+
+    .btn {
+      padding: 12px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      letter-spacing: 0.05em;
+      width: 100%;
+    }
+
+    .btn-green {
+      background: #2d6a2d;
+      color: #fff;
+    }
+
+    .btn-red {
+      background: #5a2222;
+      color: #aaa;
+    }
+
+    .btn-gray {
+      background: #333;
+      color: #fff;
+    }
+
+    .btn-pair {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-pair .btn {
+      flex: 1;
+    }
+
+    .color-btn {
+      width: 60px;
+      height: 60px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: 3px solid transparent;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: border 0.15s;
+      margin: 4px;
+    }
+
+    .color-btn .dot {
+      width: 10px;
+      height: 10px;
+      background: #fff;
+      border-radius: 50%;
+      display: block;
+    }
+
+    .color-btn.selected {
+      border-color: #fff;
+      box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: bold;
+      cursor: pointer;
+      color: #fff;
+      background: #1a1a1a;
+      position: relative;
+    }
+
+    .mode-btn.active {
+      border-color: #4caf50;
+    }
+
+    .mode-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    #status-dot {
+      color: #888;
+    }
+
+    #status-dot.on {
+      color: #4caf50;
+    }
+
+    #msg {
+      font-size: 13px;
+      color: #aaa;
+      margin-bottom: 12px;
+    }
+
+    .badge {
+      display: none;
+      position: absolute;
+      top: -9px;
+      right: 8px;
+      background: #4caf50;
+      color: #fff;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+    }
+
+    .mode-btn.active .badge {
+      display: inline-block;
+    }
+
+    #auth-screen {
+      max-width: 400px;
+      margin: 80px auto;
+      text-align: center;
+    }
+
+    #auth-screen input {
+      width: 100%;
+      padding: 12px;
+      font-size: 18px;
+      border-radius: 6px;
+      border: 2px solid #444;
+      background: #1a1a1a;
+      color: #fff;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      text-align: center;
+    }
+
+    #auth-screen .btn {
+      margin-top: 4px;
+    }
+
+    #auth-err {
+      color: #ff5555;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+
+    #panel-screen {
+      max-width: 680px;
+      margin: 0 auto;
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- AUTH SCREEN -->
+  <div id="auth-screen">
+    <h3 style="margin-bottom:20px;font-size:22px;">ADMIN PANEL</h3>
+    <input type="text" id="code-input" placeholder="ENTER CODE" autocomplete="off" />
+    <button class="btn btn-green" onclick="submitCode()">ENTER</button>
+    <div id="auth-err">Invalid or expired code.</div>
+  </div>
+
+  <!-- PANEL SCREEN -->
+  <div id="panel-screen">
+
+    <div class="card">
+      <h3>RIGGING ACCESS</h3>
+      <p id="msg">Inactive.</p>
+      <div class="status-row"><strong>Status:</strong> <span id="status-dot">&#9679;</span> <span id="status-label"
+          style="font-weight:bold;color:#888;">INACTIVE</span></div>
+      <div class="status-row" style="margin-bottom:14px;"><strong>Time left:</strong> <span id="time-left">--</span>
+      </div>
+      <div class="btn-pair">
+        <button class="btn btn-green" id="activate-btn" onclick="activateSession()">ACTIVATE</button>
+        <button class="btn btn-red" id="disable-btn" onclick="disableSession()">DISABLE</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>QUICK OUTCOME PICKER</h3>
+      <p style="font-size:13px;color:#ccc;margin-bottom:12px;">Choose a mode then click a color. Click again to clear.
+      </p>
+      <div class="mode-row">
+        <button class="mode-btn active" id="mode-come" onclick="setMode('come')">COLOR TO COME<span
+            class="badge">ACTIVE</span></button>
+        <button class="mode-btn" id="mode-notcome" onclick="setMode('notcome')">COLOR NOT TO COME<span
+            class="badge">ACTIVE</span></button>
+      </div>
+      <p id="mode-label" style="font-size:13px;font-weight:bold;margin-bottom:10px;">Editing: Color To Come</p>
+      <div id="color-btns">
+        <div class="color-btn" style="background:#ff2a2a;" onclick="toggleColor(1)"><span class="dot"></span></div>
+        <div class="color-btn" style="background:#ff8c00;" onclick="toggleColor(2)"><span class="dot"></span></div>
+        <div class="color-btn" style="background:#ffd700;" onclick="toggleColor(3)"><span class="dot"></span></div>
+        <div class="color-btn" style="background:#008000;" onclick="toggleColor(4)"><span class="dot"></span></div>
+        <div class="color-btn" style="background:#0000ff;" onclick="toggleColor(5)"><span class="dot"></span></div>
+        <div class="color-btn" style="background:#800080;" onclick="toggleColor(6)"><span class="dot"></span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <button class="btn btn-gray" onclick="logout()">LOGOUT</button>
+    </div>
+
+  </div>
+
+  <script>
+    // ── State ──
+    let savedCode = localStorage.getItem('panel_session_code');
+    let isActive = false;
+    let sessionEndTime = 0;
+    let timerInterval = null;
+    let pickerMode = 'come';
+    let colorToCome = null;
+    let colorNotToCome = null;
+
+    // BroadcastChannel to sync with main dice tab
+    const bc = new BroadcastChannel('admin_panel');
+
+    // Listen for updates from main tab
+    bc.onmessage = function (e) {
+      const msg = e.data;
+      if (msg.type === 'session_update') {
+        if (msg.isActive && msg.sessionEndTime) {
+          restoreSession(Math.max(0, Math.ceil((msg.sessionEndTime - Date.now()) / 1000)));
+        } else {
+          isActive = false; sessionEndTime = 0; stopTimer(); updateStatus();
+        }
+      }
+      if (msg.type === 'color_update') {
+        colorToCome = msg.colorToCome;
+        colorNotToCome = msg.colorNotToCome;
+        updateColorBtns();
+      }
+    };
+
+    // ── Init ──
+    if (savedCode) {
+      showPanel();
+      fetch('/api/panel/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: savedCode }) })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success && d.timeRemaining > 0) {
+            restoreSession(d.timeRemaining);
+          } else if (!d.success) {
+            localStorage.removeItem('panel_session_code');
+            showAuth();
+          }
+        }).catch(() => { });
+    }
+
+    function showPanel() { $('#auth-screen').hide(); $('#panel-screen').show(); }
+    function showAuth() { $('#panel-screen').hide(); $('#auth-screen').show(); }
+
+    function submitCode() {
+      const code = $('#code-input').val().trim().toUpperCase();
+      if (!code) return;
+      fetch('/api/panel/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            localStorage.setItem('panel_session_code', code);
+            savedCode = code;
+            showPanel();
+            updateStatus();
+          } else {
+            $('#auth-err').show();
+          }
+        }).catch(() => { $('#auth-err').show(); });
+    }
+    $('#code-input').on('keypress', function (e) { if (e.which === 13) submitCode(); });
+
+    function activateSession() {
+      const code = localStorage.getItem('panel_session_code');
+      if (!code) return;
+      fetch('/api/panel/activate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            restoreSession(d.timeRemaining);
+            bc.postMessage({ type: 'admin_activate', timeRemaining: d.timeRemaining });
+          } else {
+            alert(d.message || 'Activation failed');
+            logout();
+          }
+        }).catch(() => alert('Connection error'));
+    }
+
+    function disableSession() {
+      const code = localStorage.getItem('panel_session_code');
+      if (code && isActive && sessionEndTime > 0) {
+        const rem = Math.max(0, Math.ceil((sessionEndTime - Date.now()) / 1000));
+        navigator.sendBeacon('/api/panel/pause', new Blob([JSON.stringify({ code, timeRemaining: rem })], { type: 'application/json' }));
+      }
+      isActive = false; sessionEndTime = 0; stopTimer(); updateStatus();
+      bc.postMessage({ type: 'admin_disable' });
+    }
+
+    function restoreSession(seconds) {
+      isActive = true;
+      sessionEndTime = Date.now() + (seconds * 1000);
+      startTimer();
+      updateStatus();
+    }
+
+    function startTimer() {
+      stopTimer();
+      timerInterval = setInterval(function () {
+        const rem = Math.max(0, Math.ceil((sessionEndTime - Date.now()) / 1000));
+        updateStatus();
+        if (rem <= 0) { isActive = false; stopTimer(); updateStatus(); logout(); }
+      }, 1000);
+    }
+    function stopTimer() { if (timerInterval) { clearInterval(timerInterval); timerInterval = null; } }
+
+    function updateStatus() {
+      const rem = isActive ? Math.max(0, Math.ceil((sessionEndTime - Date.now()) / 1000)) : 0;
+      if (isActive && rem > 0) {
+        $('#status-dot').css('color', '#4caf50').text('●');
+        $('#status-label').css('color', '#4caf50').text('ACTIVE');
+        $('#msg').text('Session running. Do not forget to DISABLE when done.');
+        const m = Math.floor(rem / 60), s = rem % 60;
+        $('#time-left').text(m + ':' + String(s).padStart(2, '0'));
+      } else {
+        $('#status-dot').css('color', '#888').text('●');
+        $('#status-label').css('color', '#888').text('INACTIVE');
+        $('#msg').text('Click ACTIVATE to start countdown.');
+        $('#time-left').text('--');
+      }
+    }
+
+    // ── Color Picker ──
+    function setMode(m) {
+      pickerMode = m;
+      $('#mode-come').toggleClass('active', m === 'come');
+      $('#mode-notcome').toggleClass('active', m === 'notcome');
+      $('#mode-label').text('Editing: ' + (m === 'come' ? 'Color To Come' : 'Color Not To Come'));
+      updateColorBtns();
+    }
+
+    function toggleColor(n) {
+      if (!isActive) { alert('Activate session first.'); return; }
+      if (pickerMode === 'come') {
+        colorToCome = (colorToCome === n) ? null : n;
+        if (colorToCome !== null) colorNotToCome = null;
+      } else {
+        colorNotToCome = (colorNotToCome === n) ? null : n;
+        if (colorNotToCome !== null) colorToCome = null;
+      }
+      updateColorBtns();
+      bc.postMessage({ type: 'color_pick', colorToCome, colorNotToCome });
+    }
+
+    function updateColorBtns() {
+      const active = pickerMode === 'come' ? colorToCome : colorNotToCome;
+      $('#color-btns .color-btn').each(function (i) {
+        $(this).toggleClass('selected', (i + 1) === active);
+      });
+    }
+
+    function logout() {
+      disableSession();
+      localStorage.removeItem('panel_session_code');
+      savedCode = null;
+      showAuth();
+    }
+
+    // Save time on close
+    window.addEventListener('beforeunload', function () {
+      const code = localStorage.getItem('panel_session_code');
+      if (code && isActive && sessionEndTime > 0 && document.visibilityState === 'visible') {
+        const rem = Math.max(0, Math.ceil((sessionEndTime - Date.now()) / 1000));
+        navigator.sendBeacon('/api/panel/pause', new Blob([JSON.stringify({ code, timeRemaining: rem })], { type: 'application/json' }));
+      }
+    });
+  </script>
+</body>
+
+</html>
