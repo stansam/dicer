@@ -33,6 +33,20 @@ try {
     }
 } catch(e) { accessCodes = {}; }
 
+// Banned/blacklist of generated codes so they are never reused
+const BANNED_FILE = path.join(__dirname, 'banned_codes.json');
+let bannedCodes = new Set();
+try {
+    if (fs.existsSync(BANNED_FILE)) {
+        const arr = JSON.parse(fs.readFileSync(BANNED_FILE, 'utf8'));
+        bannedCodes = new Set(arr);
+    }
+} catch(e) { bannedCodes = new Set(); }
+
+function saveBannedCodes() {
+    try { fs.writeFileSync(BANNED_FILE, JSON.stringify(Array.from(bannedCodes))); } catch(e) {}
+}
+
 function saveCodes() {
     try { fs.writeFileSync(CODES_FILE, JSON.stringify(accessCodes)); } catch(e) {}
 }
@@ -92,6 +106,8 @@ app.post('/api/owner/generate', (req, res) => {
         duration: duration,
         expiresAt: null // Not started yet
     };
+    bannedCodes.add(newCode);
+    saveBannedCodes();
     saveCodes();
 
     console.log(`[${new Date().toISOString()}] Generated new access code: ${newCode} (Duration: ${duration}s)`);
@@ -276,7 +292,17 @@ app.post('/api/panel/pause', (req, res) => {
     const data = accessCodes[code];
     if (!data) return res.status(404).json({ success: false });
 
-    const remaining = Math.max(0, Math.floor(timeRemaining || 0));
+    // const remaining = Math.max(0, Math.floor(timeRemaining || 0));
+    if (!data.activeUntil) {
+        return res.json({ success: true, message: 'Already paused' });
+    }
+
+    let remaining = Math.max(0, Math.floor(timeRemaining || 0));
+    const serverRemaining = Math.max(0, Math.ceil((data.activeUntil - Date.now()) / 1000));
+
+    if (remaining > serverRemaining + 5) {
+        remaining = serverRemaining;
+    }
     data.duration = remaining;
     delete data.activeUntil;
     saveCodes();
